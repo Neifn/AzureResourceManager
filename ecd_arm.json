@@ -117,8 +117,8 @@
       "filePath": "[concat(variables('storageName'),' ',resourceGroup().Name,' > ','/home/',parameters('adminUsername'),'/deploymentInfo')]",
       "deploymentInfo": "[concat('echo',' ',variables('filePath'))]",
       "dockerInstall": "yum check-update ; curl -fsSL https://get.docker.com/ | sh && systemctl start docker && systemctl enable docker",
-      "createVMUrl": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/create_vm.json', parameters('_artifactsLocationSasToken'))]",
-      "createRBACUrl": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/RBAC.json', parameters('_artifactsLocationSasToken'))]",
+      "createVMUrl": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/createVM.json', parameters('_artifactsLocationSasToken'))]",
+      "createRBACUrl": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/setUpRBAC.json', parameters('_artifactsLocationSasToken'))]",
       "VMCreate": "[concat(parameters('masterVMName'),'nested')]"
     },
     "resources": [
@@ -268,6 +268,9 @@
                 },
                 "keyData": { 
                     "value": "[parameters('sshPublicKey')]"
+                },
+                "commands": {
+                    "value": "[concat(variables('dockerInstall'),' && ',variables('deploymentInfo'))]"
                 }
               }
             }
@@ -294,44 +297,7 @@
                 }
               }
             }
-          },
-        {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('masterVMName'),'/MSILinuxExtension')]",
-            "apiVersion": "2017-03-30",
-            "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', parameters('masterVMName'))]"
-            ],
-            "properties": {
-                "publisher": "Microsoft.ManagedIdentity",
-                "type": "ManagedIdentityExtensionForLinux",
-                "typeHandlerVersion": "1.0",
-                "autoUpgradeMinorVersion": true  ,
-                "settings": {
-                    "port": 50342
-                },
-                "protectedSettings": {}
-            }
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('masterVMName'), '/Preparation')]",
-            "apiVersion": "2016-03-30",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "publisher": "Microsoft.Azure.Extensions",
-                "type": "CustomScript",
-                "typeHandlerVersion": "2.0",
-                "autoUpgradeMinorVersion": true,
-                "settings": {
-                    "commandToExecute": "[concat(variables('dockerInstall'),' && ',variables('deploymentInfo'))]" 
-                }
-            },
-            "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', parameters('masterVMName'))]"
-            ]
-        }
+          }
     ],
     "outputs": {
         "hostname": {
