@@ -1,0 +1,139 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "adminUsername": {
+        "type": "string",
+        "metadata": {
+          "description": "Username for the Virtual Machine."
+        }
+      },
+      "location": {
+        "type": "string",
+        "metadata": {
+          "description": "The Location For the resources"
+        }, 
+        "defaultValue": "[resourceGroup().location]"
+      },
+      "nodeSize": {
+        "type": "string",
+        "metadata": {
+          "description": "The size of the VM to create"
+        }, 
+        "defaultValue": "Standard_DS1_V2"
+      },
+      "masterVMName": {
+        "type": "string",
+        "metadata": {
+          "description": "The name of the VM to create"
+        }
+      },
+       "nicName": {
+        "type": "string",
+        "metadata": {
+          "description": "The name of the NIC to create"
+        }
+      },
+       "sshKeyPath": {
+        "type": "string",
+        "metadata": {
+          "description": "Path to SSH key on VM"
+        }
+      },
+       "sshPublicKey": {
+        "type": "string",
+        "metadata": {
+          "description": "SSH public key"
+        }
+      },
+      "imagePublisher": {
+        "type": "string",
+        "metadata": {
+          "description": "The VM Publisher"
+        }
+      },
+      "imageOffer": {
+        "type": "string",
+        "metadata": {
+          "description": "The VM Offer"
+        }
+      },
+      "CentOSVersion": {
+        "type": "string",
+        "metadata": {
+          "description": "The VM SKU"
+        }
+      }
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-03-30",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[parameters('masterVMName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('nodeSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('masterVMName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "ssh": {
+                          "publicKeys": [
+                            {
+                              "path": "[parameters('sshKeyPath')]",
+                              "keyData": "[parameters('sshPublicKey')]"
+                            }
+                          ]
+                        }
+                      }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[parameters('imagePublisher')]",
+                        "offer": "[parameters('imageOffer')]",
+                        "sku": "[parameters('CentOSVersion')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',parameters('nicName'))]"
+                        }
+                    ]
+                }
+            }
+        },
+      {
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('masterVMName'),'/MSILinuxExtension')]",
+          "apiVersion": "2017-03-30",
+          "location": "[parameters('Location')]",
+          "dependsOn": [
+              "[concat('Microsoft.Compute/virtualMachines/', parameters('masterVMName'))]"
+          ],
+          "properties": {
+              "publisher": "Microsoft.ManagedIdentity",
+              "type": "ManagedIdentityExtensionForLinux",
+              "typeHandlerVersion": "1.0",
+              "autoUpgradeMinorVersion": true  ,
+              "settings": {
+                  "port": 50342
+              },
+              "protectedSettings": {}
+          }
+      } 
+    ],
+    "outputs": {
+       "principalId": {
+        "type": "string",
+        "value": "[reference(concat(resourceId('Microsoft.Compute/virtualMachines/', parameters('masterVMName')),'/providers/Microsoft.ManagedIdentity/Identities/default'),'2015-08-31-PREVIEW').principalId]"
+      }
+    }
+  }

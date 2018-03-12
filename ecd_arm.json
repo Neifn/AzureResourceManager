@@ -1,0 +1,350 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "_artifactsLocation": {
+            "type": "string",
+            "metadata": {
+              "description": "The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated."
+            },
+            "defaultValue": "https://raw.githubusercontent.com/Neifn/AzureResourceManager/master/"
+          },
+          "_artifactsLocationSasToken": {
+            "type": "securestring",
+            "metadata": {
+              "description": "The sasToken required to access _artifactsLocation."
+            },
+            "defaultValue": ""
+          },
+        "masterVMName": {
+          "type": "string",
+          "defaultValue": "ECDnode",
+          "metadata": {
+            "description": "The Name of the VM."
+          }
+        },
+        "ECD_Vnet": {
+          "type": "string",
+          "defaultValue": "ECD_vnet",
+          "metadata": {
+            "description": "ECD control node VNet name"
+          }
+        },
+        "ECD_vnetAddressPrefix": {
+          "type": "string",
+          "defaultValue": "10.11.0.0/16",
+          "metadata": {
+            "description": "ECD control node address prefix"
+          }
+        },
+        "ECD_subnet_one_Name": {
+          "type": "string",
+          "defaultValue": "ECD_subnet1",
+          "metadata": {
+            "description": "ECD control node subnet 1 Name"
+          }
+        },
+        "ECD_subnet_one_Prefix": {
+          "type": "string",
+          "defaultValue": "10.11.0.0/24",
+          "metadata": {
+            "description": "ECD control node subnet 1 Prefix"
+          }
+        },
+        "nodeSize": {
+          "type": "string",
+          "allowedValues": [
+            "Standard_B1ms",
+            "Standard_B2ms"
+          ],
+          "defaultValue": "Standard_B2ms",
+          "metadata": {
+            "description": "Size of the  node."
+          }
+        },
+      "adminUsername": {
+          "type": "string",
+          "metadata": {
+              "description": "User name for the Virtual Machine."
+          }
+      },
+      "sshPublicKey": {
+          "type": "securestring",
+          "metadata": {
+              "description": "ssh public key for the Virtual Machine."
+          }
+      },
+      "dnsLabelPrefix": {
+          "type": "string",
+          "metadata": {
+              "description": "Unique DNS Name for the Public IP used to access the Virtual Machine."
+          }
+      },
+      "CentOSVersion": {
+          "type": "string",
+          "defaultValue": "7.4",
+          "metadata": {
+              "description": "The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version."
+          }
+      },
+      "storageSKU": {
+          "type": "string",
+          "allowedValues": [
+            "Standard_LRS",
+            "Standard_ZRS",
+            "Standard_GRS",
+            "Standard_RAGRS",
+            "Premium_LRS"
+          ],
+          "defaultValue": "Standard_LRS",
+          "metadata": {
+            "description": "The type of replication to use for the storage account."
+          }
+        }
+  },
+  "variables": {
+      "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'salinuxvm')]",
+      "imagePublisher": "OpenLogic",
+      "imageOffer": "CentOS",
+      "nicName": "myVMNic",
+      "storageAccountType": "Standard_LRS",
+      "publicIPAddressName": "myPublicIP",
+      "publicIPAddressType": "Dynamic",
+      "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',parameters('ECD_Vnet'))]",
+      "subnetRef": "[concat(variables('vnetID'),'/subnets/',parameters('ECD_subnet_one_Name'))]",
+      "sshKeyPath": "[concat('/home/',parameters('adminUsername'),'/.ssh/authorized_keys')]",
+      "storageName": "[toLower(concat(parameters('masterVMName'),uniqueString(resourceGroup().id)))]",
+      "filePath": "[concat(variables('storageName'),' ',resourceGroup().Name,' > ','/home/',parameters('adminUsername'),'/deploymentInfo')]",
+      "deploymentInfo": "[concat('echo',' ',variables('filePath'))]",
+      "dockerInstall": "yum check-update ; curl -fsSL https://get.docker.com/ | sh && systemctl start docker && systemctl enable docker",
+      "createVMUrl": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/create_vm.json', parameters('_artifactsLocationSasToken'))]",
+      "createRBACUrl": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/RBAC.json', parameters('_artifactsLocationSasToken'))]",
+      "VMCreate": "[concat(parameters('masterVMName'),'nested')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('storageAccountName')]",
+            "apiVersion": "2017-06-01",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "[variables('storageAccountType')]"
+            },
+            "kind": "Storage",
+            "properties": {}
+        },
+        {
+            "apiVersion": "2017-06-01",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('publicIPAddressName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+                "dnsSettings": {
+                    "domainNameLabel": "[parameters('dnsLabelPrefix')]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-06-01",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('ECD_Vnet')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('ECD_vnetAddressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('ECD_subnet_one_Name')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('ECD_subnet_one_Prefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2017-06-01",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('nicName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/', parameters('ECD_Vnet'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+                            },
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('storageName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2016-01-01",
+            "sku": {
+              "name": "[parameters('storageSKU')]"
+            },
+            "kind": "Storage",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks/', parameters('ECD_Vnet'))]",
+                "[resourceId('Microsoft.Network/publicIPAddresses/',variables('publicIPAddressName'))]"
+            ],
+            "properties": {
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [
+                      {
+                        "id": "[resourceId('Microsoft.Network/networkInterfaces',parameters('ECD_subnet_one_Name'))]",
+                        "action": "Allow",
+                        "state": "Succeeded"
+                      } 
+                    ],
+                    "ipRules": [
+                      {
+                        "value": "[reference(concat('Microsoft.Network/publicIPAddresses/',variables('publicIPAddressName'))).dnsSettings.fqdn]",
+                        "action": "Allow"
+                      }
+                    ],
+                    "defaultAction": "Deny"
+                }
+            }
+        },
+        {
+            "name": "[variables('VMCreate')]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "dependsOn": [
+              "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+              "[resourceId('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+            ],
+            "properties": {
+              "mode": "Incremental",
+              "templateLink": {
+                "uri": "[variables('createVMUrl')]"
+              },
+              "parameters": {
+                "adminUsername": {
+                  "value": "[parameters('adminUsername')]"
+                },
+                "location": {
+                  "value": "[resourceGroup().location]"
+                },
+                "vmSize": {
+                  "value": "[parameters('nodeSize')]"
+                },
+                "vmName": {
+                  "value": "[parameters('masterVMName')]"
+                },
+                "nicName": {
+                  "value": "[variables('nicName')]"
+                },
+                "publisher": {
+                  "value": "[variables('imagePublisher')]"
+                },
+                "offer": {
+                  "value": "[variables('imageOffer')]"
+                },
+                "CentOSVersion": {
+                  "value": "[parameters('CentOSVersion')]"
+                },
+                "sshKeyPath": {
+                    "value": "[variables('sshKeyPath')]"
+                },
+                "keyData": { 
+                    "value": "[parameters('sshPublicKey')]"
+                }
+              }
+            }
+        },
+        {
+            "name": "creatingRBAC",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "dependsOn": [
+              "[concat('Microsoft.Resources/deployments/',variables('VMCreate'))]"
+            ],
+            "properties": {
+              "mode": "Incremental",
+              "templateLink": {
+                "uri": "[variables('createRBACUrl')]",
+                "contentVersion": "1.0.0.0"
+              },
+              "parameters": {
+                "principalId": {
+                  "value": "[reference(concat('Microsoft.Resources/deployments/',variables('VMCreate')), '2016-09-01').outputs.principalId.value]"
+                },
+                "ResourceGroup": {
+                  "value": "[resourceGroup().id]"
+                }
+              }
+            }
+          },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('masterVMName'),'/MSILinuxExtension')]",
+            "apiVersion": "2017-03-30",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('masterVMName'))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.ManagedIdentity",
+                "type": "ManagedIdentityExtensionForLinux",
+                "typeHandlerVersion": "1.0",
+                "autoUpgradeMinorVersion": true  ,
+                "settings": {
+                    "port": 50342
+                },
+                "protectedSettings": {}
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('masterVMName'), '/Preparation')]",
+            "apiVersion": "2016-03-30",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "commandToExecute": "[concat(variables('dockerInstall'),' && ',variables('deploymentInfo'))]" 
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('masterVMName'))]"
+            ]
+        }
+    ],
+    "outputs": {
+        "hostname": {
+            "type": "string",
+            "value": "[reference(variables('publicIPAddressName')).dnsSettings.fqdn]"
+        },
+        "sshCommand": {
+            "type": "string",
+            "value": "[concat('ssh ', parameters('adminUsername'), '@', reference(variables('publicIPAddressName')).dnsSettings.fqdn)]"
+        },
+        "principalId": {
+            "type": "string",
+            "value": "[reference('Microsoft.Resources/deployments/creatingVM', '2016-09-01').outputs.principalId.value]"
+          }
+    }
+}
