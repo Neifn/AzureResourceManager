@@ -16,7 +16,7 @@
     }
   },
   "variables": {
-    "owner": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '8e3af657-a8ff-443c-a75c-2fe8c4bcb635')]",
+    "owner": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '1f90228a-7aac-4ea7-ad82-b57d222ab128')]",
     "RBACResourceName":"[concat(parameters('ResourceGroup'),'/Microsoft.Authorization/',parameters('principalId'))]"
   },
   "resources": [
