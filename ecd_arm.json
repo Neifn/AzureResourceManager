@@ -288,9 +288,6 @@
               "parameters": {
                 "principalId": {
                   "value": "[reference(concat('Microsoft.Resources/deployments/',variables('VMCreate')), '2016-09-01').outputs.principalId.value]"
-                },
-                "ResourceGroup": {
-                  "value": "[resourceGroup().id]"
                 }
               }
             }

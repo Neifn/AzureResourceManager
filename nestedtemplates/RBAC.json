@@ -7,17 +7,11 @@
       "metadata": {
         "description": "Principal ID to set the access for"
       }
-    },
-    "ResourceGroup": {
-      "type": "string",
-      "metadata": {
-        "description": "The storage account to set access for"
-      }
     }
   },
   "variables": {
     "owner": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '1f90228a-7aac-4ea7-ad82-b57d222ab128')]",
-    "RBACResourceName":"[concat(parameters('ResourceGroup'),'/Microsoft.Authorization/',parameters('principalId'))]"
+    "RBACResourceName":"[concat(resourceGroup().name,'/Microsoft.Authorization/',parameters('principalId'))]"
   },
   "resources": [
     {
@@ -27,7 +21,7 @@
       "properties": {
         "roleDefinitionId": "[variables('owner')]",
         "principalId": "[parameters('principalId')]",
-        "scope": "[parameters('ResourceGroup')]"
+        "scope": "[resourceGroup().id]"
       }
     }
   ]
