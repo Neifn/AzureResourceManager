@@ -242,9 +242,6 @@
                 "adminUsername": {
                   "value": "[parameters('adminUsername')]"
                 },
-                "location": {
-                  "value": "[resourceGroup().location]"
-                },
                 "nodeSize": {
                   "value": "[parameters('nodeSize')]"
                 },
