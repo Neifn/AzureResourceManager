@@ -7,11 +7,17 @@
       "metadata": {
         "description": "Principal ID to set the access for"
       }
+    },
+    "msiName": {
+      "type": "string",
+      "metadata": {
+        "description": "MSI name"
+      }
     }
   },
   "variables": {
     "owner": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '1f90228a-7aac-4ea7-ad82-b57d222ab128')]",
-    "RBACResourceName":"[concat(resourceGroup().id,'/Microsoft.Authorization/',parameters('principalId'))]"
+    "RBACResourceName":"[concat(parameters('msiName'),'/Microsoft.Authorization/',parameters('principalId'))]"
   },
   "resources": [
     {

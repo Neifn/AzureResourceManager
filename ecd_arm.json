@@ -100,9 +100,17 @@
           "metadata": {
             "description": "The type of replication to use for the storage account."
           }
+        },
+        "dnsLabelPrefix": {
+          "type": "string",
+          "metadata": {
+            "description": "Unique DNS Name for the Public IP used to access the Virtual Machine."
+          },
+          "defaultValue": "[concat('msi',uniquestring(resourceGroup().id,deployment().name))]"
         }
   },
   "variables": {
+      "msiName": "[take(concat(uniquestring(resourceGroup().id), parameters('dnsLabelPrefix')),24)]",
       "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'salinuxvm')]",
       "imagePublisher": "OpenLogic",
       "imageOffer": "CentOS",
@@ -286,6 +294,9 @@
                 "contentVersion": "1.0.0.0"
               },
               "parameters": {
+                "msiName": {
+                  "value": "[variables('msiName')]"
+                },
                 "principalId": {
                   "value": "[reference(concat('Microsoft.Resources/deployments/',variables('VMCreate')), '2016-09-01').outputs.principalId.value]"
                 }
