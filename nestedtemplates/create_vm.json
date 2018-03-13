@@ -127,25 +127,7 @@
               },
               "protectedSettings": {}
           }
-      },
-      {
-        "type": "Microsoft.Compute/virtualMachines/extensions",
-        "name": "[concat(parameters('masterVMName'), '/Preparation')]",
-        "apiVersion": "2016-03-30",
-        "location": "[resourceGroup().location]",
-        "properties": {
-            "publisher": "Microsoft.Azure.Extensions",
-            "type": "CustomScript",
-            "typeHandlerVersion": "2.0",
-            "autoUpgradeMinorVersion": true,
-            "settings": {
-                "commandToExecute": "[parameters('commands')]" 
-            }
-        },
-        "dependsOn": [
-            "[concat('Microsoft.Compute/virtualMachines/', parameters('masterVMName'))]"
-        ]
-    } 
+      }
     ],
     "outputs": {
        "principalId": {
