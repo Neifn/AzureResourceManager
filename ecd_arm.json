@@ -117,7 +117,7 @@
       "filePath": "[concat(variables('storageName'),' ',resourceGroup().Name,' > ','/home/',parameters('adminUsername'),'/deploymentInfo')]",
       "deploymentInfo": "[concat('echo',' ',variables('filePath'))]",
       "dockerInstall": "yum check-update ; curl -fsSL https://get.docker.com/ | sh && systemctl start docker && systemctl enable docker",
-      "createVMUrl": "[concat(parameters('_artifactsLocation'), 'nestedtemlpates/create_vm.json', parameters('_artifactsLocationSasToken'))]",
+      "createVMUrl": "[concat(parameters('_artifactsLocation'), 'nestedtemplates/create_vm.json', parameters('_artifactsLocationSasToken'))]",
       "createRBACUrl": "[concat(parameters('_artifactsLocation'), 'nestedtemplates/RBAC.json', parameters('_artifactsLocationSasToken'))]",
       "VMCreate": "[concat(parameters('masterVMName'),'nested')]"
     },
