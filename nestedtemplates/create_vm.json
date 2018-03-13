@@ -8,13 +8,6 @@
           "description": "Username for the Virtual Machine."
         }
       },
-      "location": {
-        "type": "string",
-        "metadata": {
-          "description": "The Location For the resources"
-        }, 
-        "defaultValue": "[resourceGroup().location]"
-      },
       "nodeSize": {
         "type": "string",
         "metadata": {
@@ -120,7 +113,7 @@
           "type": "Microsoft.Compute/virtualMachines/extensions",
           "name": "[concat(parameters('masterVMName'),'/MSILinuxExtension')]",
           "apiVersion": "2017-03-30",
-          "location": "[parameters('Location')]",
+          "location": "[resourceGroup().location]",
           "dependsOn": [
               "[concat('Microsoft.Compute/virtualMachines/', parameters('masterVMName'))]"
           ],
